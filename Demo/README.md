@@ -1,64 +1,29 @@
-# svelte app
+# Freighter Demo
 
-This is a project template for [Svelte](https://svelte.dev) apps. It lives at https://github.com/sveltejs/template-webpack.
+The demo showcases all functionality of Freighter in the browser. You can opt to install it yourself or to run a hosted version.
 
-To create a new project based on this template using [degit](https://github.com/Rich-Harris/degit):
+# Run the hosted version
 
-```bash
-npx degit sveltejs/template-webpack svelte-app
-cd svelte-app
-```
+Go to [freighter.skaly.io](https://freighter.skaly.io)
 
-*Note that you will need to have [Node.js](https://nodejs.org) installed.*
+# Run the demo from source
 
+**Note:** The author assumes the use of Linux or Linux-based operating systems. The author is not familiar with Windows.
 
-## Get started
+Text written `like this` are terminal commands.
 
-Install the dependencies...
+1. Make sure you have NodeJS (preferably version >= 13), npm and git installed. If not, use the conventional way of your OS to install NodeJS (npm is most often included)
 
-```bash
-cd svelte-app
-npm install
-```
+2. Install yarn because it's better than npm and we need some of it's features: `npm install -g yarn`
 
-...then start webpack:
+3. Run `git clone git@github.com:peterwilli/Freighter.git` to clone this repo
 
-```bash
-npm run dev
-```
+4. Go to the Library folder in this repo: `cd <repo folder>/Library`
 
-Navigate to [localhost:8080](http://localhost:8080). You should see your app running. Edit a component file in `src`, save it, and the page should reload with your changes.
+5. Run `yarn install` to set dependencies and run `yarn link` to create a linkable package.
 
+6. Go to the Demo folder: `cd <repo folder>/Demo`
 
-## Deploying to the web
+7. Run `yarn link freighter` and run `yarn install`
 
-### With [now](https://zeit.co/now)
-
-Install `now` if you haven't already:
-
-```bash
-npm install -g now
-```
-
-Then, from within your project folder:
-
-```bash
-now
-```
-
-As an alternative, use the [Now desktop client](https://zeit.co/download) and simply drag the unzipped project folder to the taskbar icon.
-
-### With [surge](https://surge.sh/)
-
-Install `surge` if you haven't already:
-
-```bash
-npm install -g surge
-```
-
-Then, from within your project folder:
-
-```bash
-npm run build
-surge public
-```
+8. Run `yarn dev` and open the adress mentioned in your terminal (most likely http://localhost:8080) to open the demo page.

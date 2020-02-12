@@ -1,6 +1,5 @@
 {
   "name": "freighter",
-  "type": "module",
   "version": "0.1.0",
   "description": "A decentralized second-layer messaging protocol for IOTA.",
   "main": "./Exports.js",

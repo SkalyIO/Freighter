@@ -5,7 +5,7 @@ module.exports = {
   entry: {
     Freighter: "./src/Freighter.js",
     FreighterCrypto: "./src/FreighterCrypto.js",
-    FreighterPolling: "./src/FreighterPolling"
+    FreighterPolling: "./src/FreighterPolling.js"
   },
   plugins: [],
   module: {
