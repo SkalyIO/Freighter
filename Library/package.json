@@ -1,0 +1,35 @@
+{
+  "name": "freighter",
+  "version": "0.1.0",
+  "description": "A decentralized second-layer messaging protocol for IOTA.",
+  "main": "./Exports.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack",
+    "dev": "webpack --config webpack.dev.config.js",
+    "watch": "webpack --config webpack.watch.config.js"
+  },
+  "keywords": [
+    "iota",
+    "decentralized",
+    "messaging",
+    "safe",
+    "integrity"
+  ],
+  "author": "Peter Willemsen <peter@skaly.io>",
+  "license": "MIT",
+  "devDependencies": {
+    "@babel/core": "^7.4.5",
+    "@babel/plugin-proposal-class-properties": "^7.8.3",
+    "@babel/plugin-proposal-private-methods": "^7.8.3",
+    "@babel/preset-env": "^7.4.5",
+    "babel-loader": "^8.0.6",
+    "webpack": "^4.34.0",
+    "webpack-cli": "^3.3.4",
+    "webpack-obfuscator": "^0.18.0"
+  },
+  "dependencies": {
+    "@iota/checksum": "^1.0.0-beta.23",
+    "base-x": "^3.0.7"
+  }
+}
