@@ -92,12 +92,40 @@ export default class Freighter {
             addresses
         }
         var txs = await iota.findTransactionObjects(searchValues)
-        var ret = [];
+        var bundles = {}
         for(var tx of txs) {
+            if(bundles[tx.bundle]) {
+                bundles[tx.bundle].push(tx)
+            }
+            else {
+                bundles[tx.bundle] = [tx]
+            }
+        }
+        var ret = [];
+        for(const bundleKey in bundles) {
+            const bundle = bundles[bundleKey]
+            bundle.sort((a, b) => {
+                if(a.currentIndex < b.currentIndex) {
+                    return -1;
+                }
+                if(a.currentIndex > b.currentIndex) {
+                    return 1;
+                }
+                return 0;
+            })
             try {
-                const index = addressToIndexMap.get(tx.address)
-                // Strip off all 9's (at the end of the message only) + remove the end marker
-                const msgPart = tx.signatureMessageFragment.replace(/9+$/g, "").slice(0, -1)
+                const index = addressToIndexMap.get(bundle[0].address)
+                var msgPart = ""
+                for(var i = 0; i < bundle.length; i++) {
+                    var tx = bundle[i]
+                    var frag = tx.signatureMessageFragment
+                    if(i === (bundle.length - 1)) {
+                        // Strip off all 9's (at the end of the message only) + remove the end marker
+                        frag = frag.replace(/9+$/g, "").slice(0, -1)
+                    }
+                    msgPart += frag
+                }
+                console.log('msgPart', msgPart)
                 const buf = tryteCoder.decode(msgPart);
                 const unlockedMessage = Freighter.unlockMessage(addrSeed, buf, index) 
                 
@@ -310,10 +338,6 @@ export default class Freighter {
 
         const lockedData = Freighter.lockMessage(addrSeed, data, this.#currentIndex)
         const dataTrytes = tryteCoder.encode(lockedData) + Freighter.randomEndingTryte()
-
-        if(dataTrytes.length > 2187) {
-            throw new Error("Messages cannot be longer than 2187 trytes! (For now)")
-        }
 
         var transfers = [{
             tag,

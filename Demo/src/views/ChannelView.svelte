@@ -12,7 +12,7 @@ dayjs.extend(relativeTime)
 var polling, freighter;
 var historyIndex = -1;
 var messages = [];
-var msgToSend;
+var msgToSend = "";
 var sendingMsg = false;
 
 async function loadHistory() {
@@ -44,7 +44,7 @@ async function handleSubmit() {
 
 function randomMessage() {
     const randomFirst = ["Hugs", "Waves"]
-    const randomSecond = ["Peter", "Dominik", "David", "CfB", "Skaly"]
+    const randomSecond = ["Peter", "Dominik", "David", "Skaly"]
     
     msgToSend = `${randomFirst[Math.random()*randomFirst.length>>0]} from ${randomSecond[Math.random()*randomSecond.length>>0]}`
 }
