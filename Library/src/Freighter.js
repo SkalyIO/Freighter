@@ -359,9 +359,9 @@ export default class Freighter {
 
         const addrSeed = this.getAddressSeed()
         this.#currentIndex = await Freighter.findChannelIndex(this.iota, addrSeed, this.#currentIndex)
-        const address = addChecksum(Freighter.randomTrytes(Freighter.getKey(addrSeed, `address_${this.#currentIndex}`), 81))
-
-        const lockedData = Freighter.lockMessage(addrSeed, data, this.#currentIndex)
+        const _index = this.#currentIndex // To avoid race condition should sendMessage be called twice or more in parallel
+        const address = addChecksum(Freighter.randomTrytes(Freighter.getKey(addrSeed, `address_${_index}`), 81))
+        const lockedData = Freighter.lockMessage(addrSeed, data, _index)
         const dataTrytes = tryteCoder.encode(lockedData) + Freighter.randomEndingTryte()
 
         var transfers = [{
