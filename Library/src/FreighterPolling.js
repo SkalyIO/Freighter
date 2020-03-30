@@ -17,7 +17,13 @@ export default class FreighterPolling extends EventEmitter {
 
     async startPolling() {
         const _this = this
-        this.#currentIndex = await this.Freighter.findChannelIndex(this.iota, _this.#addressSeed, this.#currentIndex)
+        var startTimestamp = Math.round(new Date().getTime() / 1000)
+        this.#currentIndex = await this.Freighter.findChannelIndex(this.iota, _this.#addressSeed, this.#currentIndex, (txs) => {
+            if(txs.length > 0) {
+                return startTimestamp > txs[0].timestamp
+            }
+            return true
+        })
         this.offset = this.#currentIndex
         var failTries = 0;
         const tick = () => {

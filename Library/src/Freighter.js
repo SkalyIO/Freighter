@@ -280,7 +280,7 @@ export default class Freighter {
             return originalMessage
         }
         else {
-            throw new Error(`unlockMessage checksum is incorrect... ${chk.toString('hex')} vs ${chkMessage.toString('hex')}`)
+            throw new Error(`unlockMessage checksum is incorrect... ${chk.toString('hex')} vs ${chkMessage.toString('hex')} originalMessage: ${originalMessage}`)
         }
     }
 
@@ -290,7 +290,11 @@ export default class Freighter {
         })
     }
 
-    static async findChannelIndex(iota, addrSeed, fromIdx) {
+    static EmptyChannelIndexFilter(txs) {
+        return txs.length === 0
+    }
+
+    static async findChannelIndex(iota, addrSeed, fromIdx, filter = Freighter.EmptyChannelIndexFilter) {
         if(fromIdx > 0) {
             // Check if there is still a message at the beginning.
             // If it's suddenly empty, we have been past a snapshot and have to start over.
@@ -317,20 +321,20 @@ export default class Freighter {
                 const txs = await iota.findTransactionObjects({
                     addresses: [address]
                 })
-                if(txs.length === 0) {
-                    // Going backwards until we find the first address with a message
+                if(filter(txs)) {
+                    // Going backwards until we find the first address that doesnt apply to filter
                     while(currentIndex > 0) {
                         currentIndex--
                         const address2 = addChecksum(Freighter.randomTrytes(Freighter.getKey(addrSeed, `address_${currentIndex}`), 81))                        
                         const txs2 = await iota.findTransactionObjects({
                             addresses: [address2]
                         })
-                        if(txs2.length > 0) {
-                            // Found the first address with a message, so our previous address is the free one
+                        if(!filter(txs2)) {
+                            // Found the first address with that is not applying to filter
                             return currentIndex + 1;
                         }
                         // Making sure we don't spam
-                        await Freighter.sleep(500)
+                        await Freighter.sleep(1000)
                     }
                     // This is an empty address in the channel address tree, so we will use this one to send our messages from.
                     return currentIndex;
@@ -340,7 +344,7 @@ export default class Freighter {
                 console.warn(`Error while fetching transactions from ${address} (ignored).`, e)
             }
             // Making sure we don't spam
-            await Freighter.sleep(500)
+            await Freighter.sleep(1000)
             const skip = Math.max(1, increaseTries++ * 10)
             console.log(`Skipping ${skip} addresses`)
             currentIndex += skip            
@@ -355,7 +359,6 @@ export default class Freighter {
 
         const addrSeed = this.getAddressSeed()
         this.#currentIndex = await Freighter.findChannelIndex(this.iota, addrSeed, this.#currentIndex)
-        
         const address = addChecksum(Freighter.randomTrytes(Freighter.getKey(addrSeed, `address_${this.#currentIndex}`), 81))
 
         const lockedData = Freighter.lockMessage(addrSeed, data, this.#currentIndex)
