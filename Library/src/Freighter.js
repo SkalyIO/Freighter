@@ -12,6 +12,7 @@ const tryteCoder = require('base-x')(TRYTE_CHARSET)
 export default class Freighter {
     #seed = null;
     #currentIndex = 0;
+    static version = "0.15.0"
 
     constructor(iota, seed) {
         this.#seed = seed
@@ -125,7 +126,6 @@ export default class Freighter {
                     }
                     msgPart += frag
                 }
-                console.log('msgPart', msgPart)
                 const buf = tryteCoder.decode(msgPart);
                 const unlockedMessage = Freighter.unlockMessage(addrSeed, buf, index) 
                 
@@ -284,6 +284,12 @@ export default class Freighter {
         }
     }
 
+    static async sleep(ms) {
+        return new Promise((resolve, _) => {
+            setTimeout(resolve, ms)
+        })
+    }
+
     static async findChannelIndex(iota, addrSeed, fromIdx) {
         if(fromIdx > 0) {
             // Check if there is still a message at the beginning.
@@ -312,13 +318,29 @@ export default class Freighter {
                     addresses: [address]
                 })
                 if(txs.length === 0) {
+                    // Going backwards until we find the first address with a message
+                    while(currentIndex > 0) {
+                        currentIndex--
+                        const address2 = addChecksum(Freighter.randomTrytes(Freighter.getKey(addrSeed, `address_${currentIndex}`), 81))                        
+                        const txs2 = await iota.findTransactionObjects({
+                            addresses: [address2]
+                        })
+                        if(txs2.length > 0) {
+                            // Found the first address with a message, so our previous address is the free one
+                            return currentIndex + 1;
+                        }
+                        // Making sure we don't spam
+                        await Freighter.sleep(500)
+                    }
                     // This is an empty address in the channel address tree, so we will use this one to send our messages from.
                     return currentIndex;
                 }
             }
             catch (e) {
-                console.warn(`Error while fetching transactions from ${address} (ignored).`)
+                console.warn(`Error while fetching transactions from ${address} (ignored).`, e)
             }
+            // Making sure we don't spam
+            await Freighter.sleep(500)
             const skip = Math.max(1, increaseTries++ * 10)
             console.log(`Skipping ${skip} addresses`)
             currentIndex += skip            

@@ -15,6 +15,8 @@ var messages = [];
 var msgToSend = "";
 var sendingMsg = false;
 
+const freighterVersion = Freighter.version
+
 async function loadHistory() {
     const historyMessages = await Freighter.getChannelHistory(iota.instance, freighter.getAddressSeed(), historyIndex, 15)
     if(historyMessages !== null && historyMessages.length > 0) {
@@ -74,7 +76,7 @@ onMount(() => {
 </script>
 
 <main>
-    <p>Viewing Channel: {$channelKey}</p>
+    <p>Viewing Channel: {$channelKey} using Freighter v{freighterVersion}</p>
     <h2>Type new message</h2>
     <form on:submit|preventDefault={handleSubmit}>
         <input type="text" disabled={sendingMsg} bind:value={msgToSend} /> <input on:click={randomMessage} type="button" value="Make a message for me!"/>
