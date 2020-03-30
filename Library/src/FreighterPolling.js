@@ -20,7 +20,7 @@ export default class FreighterPolling extends EventEmitter {
         var startTimestamp = Math.round(new Date().getTime() / 1000)
         this.#currentIndex = await this.Freighter.findChannelIndex(this.iota, _this.#addressSeed, this.#currentIndex, (txs) => {
             if(txs.length > 0) {
-                return startTimestamp > txs[0].timestamp
+                return startTimestamp < txs[0].timestamp
             }
             return true
         })
