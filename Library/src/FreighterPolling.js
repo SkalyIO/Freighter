@@ -15,6 +15,18 @@ export default class FreighterPolling extends EventEmitter {
         this.timer = null
     }
 
+    async tick() {
+        const data = await this.Freighter.getDataList(this.iota, this.#addressSeed, this.offset, 5)
+        if(data.length > 0) {
+            this.emit('messages', data)
+            var newOffset = 0;
+            for(var d of data) {
+                newOffset = Math.max(d.index + 1, newOffset)
+            }
+            this.offset = newOffset
+        }
+    }
+
     async startPolling() {
         const _this = this
         var startTimestamp = Math.round(new Date().getTime() / 1000)
@@ -26,34 +38,28 @@ export default class FreighterPolling extends EventEmitter {
         })
         this.offset = this.#currentIndex
         var failTries = 0;
-        const tick = () => {
-            _this.timer = setTimeout(async () => {
-                try {
-                    const data = await this.Freighter.getDataList(_this.iota, _this.#addressSeed, _this.offset, 5)
-                    failTries = 0;
-                    if(data.length > 0) {
-                        this.emit('messages', data)
-                        var newOffset = 0;
-                        for(var d of data) {
-                            newOffset = Math.max(d.index + 1, newOffset)
-                        }
-                        _this.offset = newOffset
-                    }
-                }
-                catch (e) {
-                    console.error(`getDataList(${_this.offset}) error`, e);
-                    failTries++;
-                    if(failTries > 5) {
-                        console.warn('Failed more than 5 times, skipping this offset (for now)');
+        if(this.interval > 0) {
+            const tick = () => {
+                _this.timer = setTimeout(async () => {
+                    try {
+                        await _this.tick()
                         failTries = 0;
-                        _this.offset += 5;
                     }
-                }
-                finally {
-                    tick()
-                }
-            }, _this.interval)
+                    catch (e) {
+                        console.error(`getDataList(${_this.offset}) error`, e);
+                        failTries++;
+                        if(failTries > 5) {
+                            console.warn('Failed more than 5 times, skipping this offset (for now)');
+                            failTries = 0;
+                            _this.offset += 5;
+                        }
+                    }
+                    finally {
+                        tick()
+                    }
+                }, _this.interval)
+            }
+            tick()    
         }
-        tick()
     }
 }
