@@ -12,7 +12,7 @@ const tryteCoder = require('base-x')(TRYTE_CHARSET)
 export default class Freighter {
     #seed = null;
     #currentIndex = 0;
-    static version = "0.15.0"
+    static version = "0.15.1"
 
     constructor(iota, seed) {
         this.#seed = seed
@@ -313,7 +313,7 @@ export default class Freighter {
             }
         }
         
-        var currentIndex = 0;
+        var currentIndex = fromIdx;
         var increaseTries = -5;
         while(true) {
             const address = addChecksum(Freighter.randomTrytes(Freighter.getKey(addrSeed, `address_${currentIndex}`), 81))
@@ -329,6 +329,7 @@ export default class Freighter {
                         const txs2 = await iota.findTransactionObjects({
                             addresses: [address2]
                         })
+                        
                         if(!filter(txs2)) {
                             // Found the first address with that is not applying to filter
                             return currentIndex + 1;
@@ -374,6 +375,7 @@ export default class Freighter {
         try {
             const trytes = await this.iota.prepareTransfers('9'.repeat(81), transfers)
             const bundle = await this.iota.sendTrytes(trytes, 4, mwm)
+            this.#currentIndex++;
             return bundle
         } catch (e) {
             console.error('prepareTransfers error!', transfers, e);
