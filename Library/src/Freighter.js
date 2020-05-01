@@ -378,7 +378,7 @@ export default class Freighter {
             this.#currentIndex++;
             return bundle
         } catch (e) {
-            console.error('prepareTransfers error!', transfers, e);
+            console.error('prepareTransfers or sendTrytes error!', transfers, e);
             return null
         }
     }
