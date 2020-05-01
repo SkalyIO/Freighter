@@ -12,7 +12,7 @@ const tryteCoder = require('base-x')(TRYTE_CHARSET)
 export default class Freighter {
     #seed = null;
     #currentIndex = 0;
-    static version = "0.15.2"
+    static version = "0.15.4"
 
     constructor(iota, seed) {
         this.#seed = seed
@@ -323,19 +323,41 @@ export default class Freighter {
                 })
                 if(filter(txs)) {
                     // Going backwards until we find the first address that doesnt apply to filter
-                    while(currentIndex > 0) {
-                        currentIndex--
-                        const address2 = addChecksum(Freighter.randomTrytes(Freighter.getKey(addrSeed, `address_${currentIndex}`), 81))                        
-                        const txs2 = await iota.findTransactionObjects({
-                            addresses: [address2]
-                        })
-                        
-                        if(!filter(txs2)) {
-                            // Found the first address with that is not applying to filter
-                            return currentIndex + 1;
+                    const backwardsPackets = 10
+                    const addreses = []
+
+                    // We don't do a backwards search unless increaseTries is bigger than 1.
+                    // Otherwise we would never have missed any and a backwards search would be unnesecary.
+                    if(increaseTries > 1) {
+                        while(currentIndex > 0) {
+                            addreses.length = 0
+                            const addressCount = Math.min(currentIndex + 1, backwardsPackets)
+                            var indexes = Array.from({ length: addressCount }, (v, i) => currentIndex - i)
+                            
+                            const addressToIndexMap = new Map(indexes.map((idx) => {
+                                return [Freighter.randomTrytes(Freighter.getKey(addrSeed, `address_${idx}`), 81), idx]
+                            }))
+                            const addresses = [... addressToIndexMap.keys()]                
+                            const txs2 = await iota.findTransactionObjects({
+                                addresses
+                            })    
+                            for(var addr of addresses) {
+                                var txsForAddress = []
+                                for(var tx of txs2) {
+                                    if(tx.address === addr) {
+                                        txsForAddress.push(tx)
+                                    }
+                                }
+                                if(!filter(txsForAddress)) {
+                                    // Found the first address with that is not applying to filter
+                                    return addressToIndexMap.get(addr) + 1;
+                                }
+                            }  
+                            currentIndex -= addressCount                
+                            
+                            // Making sure we don't spam
+                            await Freighter.sleep(1000)
                         }
-                        // Making sure we don't spam
-                        await Freighter.sleep(1000)
                     }
                     // This is an empty address in the channel address tree, so we will use this one to send our messages from.
                     return currentIndex;
@@ -361,6 +383,7 @@ export default class Freighter {
         const addrSeed = this.getAddressSeed()
         this.#currentIndex = await Freighter.findChannelIndex(this.iota, addrSeed, this.#currentIndex)
         const _index = this.#currentIndex // To avoid race condition should sendMessage be called twice or more in parallel
+        
         const address = addChecksum(Freighter.randomTrytes(Freighter.getKey(addrSeed, `address_${_index}`), 81))
         const lockedData = Freighter.lockMessage(addrSeed, data, _index)
         const dataTrytes = tryteCoder.encode(lockedData) + Freighter.randomEndingTryte()

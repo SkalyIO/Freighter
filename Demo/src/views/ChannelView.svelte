@@ -14,6 +14,9 @@ var historyIndex = -1;
 var messages = [];
 var msgToSend = "";
 var sendingMsg = false;
+const mwm = 14;
+const spamAmount = 100;
+const node = 'https://nodes.thetangle.org:443'
 
 const freighterVersion = Freighter.version
 
@@ -29,13 +32,30 @@ async function loadHistory() {
     }
 }
 
+async function sendSpam() {
+    if(msgToSend.length === 0) {
+        return alert("Message cannot be empty!")
+    }
+    sendingMsg = true
+    try {
+        for(var i = 0; i < spamAmount; i++) {
+            await freighter.sendMessage("FREIGHTER9DEMO", `${msgToSend}_${i + 1}`, mwm)
+        }
+    }
+    catch(e) {
+        alert(`Error: ${e.message}`)
+    }
+    msgToSend = ""
+    sendingMsg = false
+}
+
 async function handleSubmit() {
     if(msgToSend.length === 0) {
         return alert("Message cannot be empty!")
     }
     sendingMsg = true
     try {
-        await freighter.sendMessage("FREIGHTER9DEMO", msgToSend)
+        await freighter.sendMessage("FREIGHTER9DEMO", msgToSend, mwm)
     }
     catch(e) {
         alert(`Error: ${e.message}`)
@@ -57,7 +77,7 @@ function preview(msg, count) {
 
 onMount(() => {
     iota.instance = composeAPI({
-      provider: 'https://nodes.thetangle.org:443'
+      provider: node
     })
     iota.instance.getNodeInfo()
       .then(info => console.log(info))
@@ -68,7 +88,8 @@ onMount(() => {
     freighter = new Freighter(iota.instance, get(channelKey))
     polling = new FreighterPolling(Freighter, iota.instance, freighter.getAddressSeed())
     polling.on('messages', (newMsgs) => {
-        messages = messages.concat(newMsgs)
+        newMsgs.reverse()
+        messages = newMsgs.concat(messages)
     })
     polling.startPolling()
     loadHistory().then()
@@ -79,9 +100,11 @@ onMount(() => {
     <p>Viewing Channel: {$channelKey} using Freighter v{freighterVersion}</p>
     <h2>Type new message</h2>
     <form on:submit|preventDefault={handleSubmit}>
-        <input type="text" disabled={sendingMsg} bind:value={msgToSend} /> <input on:click={randomMessage} type="button" value="Make a message for me!"/>
+        <input type="text" disabled={sendingMsg} bind:value={msgToSend} /> <input disabled={sendingMsg} on:click={randomMessage} type="button" value="Make a message for me!"/>
         <br />
-        <input type="submit" disabled={sendingMsg} />
+
+        <input type="button" value="Send {spamAmount} messages" on:click="{sendSpam}" disabled={sendingMsg} />
+        <input type="submit" value="Send message" disabled={sendingMsg} />
     </form>
     <h2>Messages ({ messages.length })</h2>
     <img src="loading.gif" alt="Loading" width="32" /> <span class="loading-text">Polling for new messages...</span> 
