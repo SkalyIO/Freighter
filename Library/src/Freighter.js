@@ -12,7 +12,7 @@ const tryteCoder = require('base-x')(TRYTE_CHARSET)
 export default class Freighter {
     #seed = null;
     #currentIndex = 0;
-    static version = "0.15.1"
+    static version = "0.15.2"
 
     constructor(iota, seed) {
         this.#seed = seed
@@ -168,7 +168,7 @@ export default class Freighter {
         // Set currentIndex to right page
         currentIndex = currentIndex - itemsPerPage
         if(currentIndex < 0) {
-            itemsPerPage = (itemsPerPage + currentIndex) + 1
+            itemsPerPage = (itemsPerPage + currentIndex)
             currentIndex = 0
         }
         var result = []

@@ -20,10 +20,10 @@ const freighterVersion = Freighter.version
 async function loadHistory() {
     const historyMessages = await Freighter.getChannelHistory(iota.instance, freighter.getAddressSeed(), historyIndex, 15)
     if(historyMessages !== null && historyMessages.length > 0) {
-        messages = messages.concat(historyMessages)
-        historyIndex = historyMessages[0].index - 1
+        historyIndex = historyMessages[0].index
+        messages = messages.concat(historyMessages.reverse())
         
-        if(historyIndex > -1) {
+        if(historyIndex > 0) {
             await loadHistory()
         }
     }
