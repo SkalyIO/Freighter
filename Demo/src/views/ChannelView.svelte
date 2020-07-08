@@ -1,22 +1,21 @@
 <script>
-import { channelKey, iota } from "../Singleton.js"
+import { iota } from "../Singleton.js"
 import { get } from 'svelte/store'
-import { onMount } from 'svelte';
+import { onMount, onDestroy } from 'svelte';
 import { Freighter, FreighterCrypto, FreighterPolling } from 'freighter'
-import { composeAPI } from '@iota/core'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 
 dayjs.extend(relativeTime)
 
-var polling, freighter;
+export let channelKey
+
+var polling = null, freighter;
 var historyIndex = -1;
 var messages = [];
 var msgToSend = "";
 var sendingMsg = false;
-const mwm = 14;
 const spamAmount = 100;
-const node = 'https://nodes.thetangle.org:443'
 
 const freighterVersion = Freighter.version
 
@@ -39,7 +38,7 @@ async function sendSpam() {
     sendingMsg = true
     try {
         for(var i = 0; i < spamAmount; i++) {
-            await freighter.sendMessage("FREIGHTER9DEMO", `${msgToSend}_${i + 1}`, mwm)
+            await freighter.sendMessage("FREIGHTER9DEMO", `${msgToSend}_${i + 1}`, iota.mwm)
         }
     }
     catch(e) {
@@ -55,7 +54,7 @@ async function handleSubmit() {
     }
     sendingMsg = true
     try {
-        await freighter.sendMessage("FREIGHTER9DEMO", msgToSend, mwm)
+        await freighter.sendMessage("FREIGHTER9DEMO", msgToSend, iota.mwm)
     }
     catch(e) {
         alert(`Error: ${e.message}`)
@@ -76,16 +75,7 @@ function preview(msg, count) {
 }
 
 onMount(() => {
-    iota.instance = composeAPI({
-      provider: node
-    })
-    iota.instance.getNodeInfo()
-      .then(info => console.log(info))
-      .catch(error => {
-          console.log(`Request error: ${error.message}`)
-      })
-    
-    freighter = new Freighter(iota.instance, get(channelKey))
+    freighter = new Freighter(iota.instance, channelKey)
     polling = new FreighterPolling(Freighter, iota.instance, freighter.getAddressSeed())
     polling.on('messages', (newMsgs) => {
         newMsgs.reverse()
@@ -94,15 +84,21 @@ onMount(() => {
     polling.startPolling()
     loadHistory().then()
 })
+
+onDestroy(() => {
+    if(polling !== null) {
+        polling.stopPolling()
+        polling = null
+    } 
+})
 </script>
 
 <main>
-    <p>Viewing Channel: {$channelKey} using Freighter v{freighterVersion}</p>
+    <p>Viewing Channel: {channelKey} using Freighter v{freighterVersion}</p>
     <h2>Type new message</h2>
     <form on:submit|preventDefault={handleSubmit}>
         <input type="text" disabled={sendingMsg} bind:value={msgToSend} /> <input disabled={sendingMsg} on:click={randomMessage} type="button" value="Make a message for me!"/>
         <br />
-
         <input type="button" value="Send {spamAmount} messages" on:click="{sendSpam}" disabled={sendingMsg} />
         <input type="submit" value="Send message" disabled={sendingMsg} />
     </form>

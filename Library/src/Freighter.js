@@ -12,7 +12,7 @@ const tryteCoder = require('base-x')(TRYTE_CHARSET)
 export default class Freighter {
     #seed = null;
     #currentIndex = 0;
-    static version = "0.15.4"
+    static version = "0.15.5"
 
     constructor(iota, seed) {
         this.#seed = seed
@@ -314,7 +314,7 @@ export default class Freighter {
         }
         
         var currentIndex = fromIdx;
-        var increaseTries = -5;
+        var increaseTries = 0;
         while(true) {
             const address = addChecksum(Freighter.randomTrytes(Freighter.getKey(addrSeed, `address_${currentIndex}`), 81))
             try {
@@ -368,7 +368,7 @@ export default class Freighter {
             }
             // Making sure we don't spam
             await Freighter.sleep(1000)
-            const skip = Math.max(1, increaseTries++ * 10)
+            const skip = Math.ceil(increaseTries++ / 2) * 25
             console.log(`Skipping ${skip} addresses`)
             currentIndex += skip            
         }

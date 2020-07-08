@@ -1,3 +1,4 @@
-import { writable } from 'svelte/store'
-export const channelKey = writable(null)
-export var iota = {} 
+export var iota = {
+    mwm: 0,
+    node: 'https://private_iota.skaly.io'
+} 
