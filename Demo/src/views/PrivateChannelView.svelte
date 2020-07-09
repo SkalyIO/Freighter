@@ -66,7 +66,7 @@
 <main>
   <h1>Freighter Private Channel</h1>
   <p>
-    In Private Channels (FPC), a public channel ID is made that allows any participant
+    In Private Channels (FRPC), a public channel ID is made that allows any participant
     to talk to the owner of said ID in private completely on the Tangle, very much like a decentralized email-adress. Generation happens differently
     from normal Freighter channels: Instead of having a single key, you end up
     with a
@@ -76,7 +76,7 @@
     .
     <br />
     <br />
-    FPC is quantum-secure, using
+    FRPC is quantum-secure, using
     <i>SIKEp503</i>
     -based cryptography.
   </p>

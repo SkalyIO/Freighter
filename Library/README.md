@@ -1,6 +1,6 @@
 # Freighter JS Library
 
-The JS library is a module that allows you to use the Freighter Library and the FreighterCrypto (for production-ready `AES256-cbc` encryption) and FreighterPolling (real-time data streams) extensions.
+The JS library is a module that allows you to use the Freighter Library and the FreighterCrypto (for production-ready `AES256-CBC` encryption), FreighterPolling (real-time data streams) and Freighter Private Channels (open a trusted private channel) extensions.
 
 # How to install and run
 
