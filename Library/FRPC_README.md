@@ -1,6 +1,6 @@
 # Freighter Private Channels
 
-FRPC is a extension to Freighter that allows users to set up a fixed, public "channel address" along with a private key.
+FRPC is an extension to Freighter that allows users to set up a fixed, public "channel address" along with a private key.
 
 Anyone who "dials" this public address, will be able to talk to the owner of the private key in a new Freighter channel.
 
@@ -10,11 +10,11 @@ This process is fully quantum-secure.
 
 ## How the crypto works
 
-### Assumtions
+### Assumptions
 
 Let Alice be the channel owner, and Bob the subscriber.
 
-- Alice makes a `SIKEp503`-private/public keypair and hashes the public key to become a readable IOTA adress.
+- Alice makes a `SIKEp503`-private/public keypair and hashes the public key to become a readable IOTA address.
 - Alice posts the public key on the address she just hashed from the public key.
 - Alice posts the address on any public and untrusted channel (i.e social media). This is effectively her decentralized email address.
 - Bob dials Alice's address and posts a handshake on Alice's channel address. 
