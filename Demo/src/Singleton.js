@@ -1,4 +1,4 @@
 export var iota = {
     mwm: 0,
-    node: 'https://private_iota.skaly.io'
+    node: 'https://poc_iota.skaly.io'
 } 
