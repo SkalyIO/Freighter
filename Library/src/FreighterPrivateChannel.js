@@ -12,6 +12,7 @@ class FreighterPrivateChannel extends EventEmitter {
         this.Freighter = Freighter
         this.iota = iota
         this.mwm = 14
+        this.historyIndex = -1
         this.keyPair = {
             private: privateKey.slice(0, privateKeyLength),
             public: privateKey.slice(privateKeyLength, privateKey.length)
@@ -31,6 +32,24 @@ class FreighterPrivateChannel extends EventEmitter {
             }
         })
         this.polling.startPolling()
+    }
+
+    async loadPreviousDials() {
+        const historyMessages = await this.Freighter.getChannelHistory(this.iota, this.freighter.getAddressSeed(), this.historyIndex, 15)
+        if(historyMessages !== null && historyMessages.length > 0) {
+            this.historyIndex = historyMessages[0].index
+            for(var msg of historyMessages) {
+                try {
+                    await this.processMessage(msg)
+                }
+                catch(e) {
+                    console.warn("processMessage Error (ignored)", e)
+                }
+            }
+            if(this.historyIndex > 0) {
+                await this.loadPreviousDials()
+            }
+        }
     }
 
     destroy() {
