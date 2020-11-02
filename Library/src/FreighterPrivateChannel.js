@@ -5,20 +5,18 @@ const crypto = require('crypto')
 const checksumLength   = 2;
 const privateKeyLength = 434;
 const publicKeyLength = 378;
+const FRPCVersion = 0;
+const versionBytes = Buffer.from([FRPCVersion])
 
 class FreighterPrivateChannel extends EventEmitter {
-    constructor(Freighter, FreighterPolling, iota, privateKey) {
+    constructor(Freighter, FreighterPolling, iota, keyPair) {
         super()
         this.Freighter = Freighter
         this.iota = iota
         this.mwm = 14
         this.historyIndex = -1
-        this.keyPair = {
-            private: privateKey.slice(0, privateKeyLength),
-            public: privateKey.slice(privateKeyLength, privateKey.length)
-        }
-        this.keyPair.address = FreighterPrivateChannel.hash(this.keyPair.public)
-        this.freighter = new Freighter(iota, this.keyPair.address)
+        this.keyPair = keyPair
+        this.freighter = new Freighter(iota, keyPair.address)
         this.polling = new FreighterPolling(Freighter, iota, this.freighter.getAddressSeed())
         const _this = this
         this.polling.on('messages', async (newMsgs) => {
@@ -41,6 +39,7 @@ class FreighterPrivateChannel extends EventEmitter {
             for(var msg of historyMessages) {
                 try {
                     await this.processMessage(msg)
+                    await this.Freighter.sleep(250)
                 }
                 catch(e) {
                     console.warn("processMessage Error (ignored)", e)
@@ -57,87 +56,78 @@ class FreighterPrivateChannel extends EventEmitter {
     }
 
     async processMessage(msg) {
-        var decrypted = await sidh.decrypt(msg.message, this.keyPair.private)
-        decrypted = Buffer.from(decrypted) // uint8 to Buffer
-        const checksum = decrypted.slice(0, checksumLength)
-        const end = decrypted.slice(checksumLength, decrypted.length)
-        const channelKey = end.slice(0, 32)
-        const metadata = end.slice(32, end.length)
-        
-        if(FreighterPrivateChannel.hash(end).slice(0, checksumLength).equals(checksum)) {
-            // We're good to go
-            this.emit('dial', { channelKey, metadata })
+        const stateFreighterKey = msg.message
+        if(stateFreighterKey.length !== 32) {
+            throw new Error("[processMessage] Random channel key should be 32 bytes!")
+        }
+        const stateFreighter = new this.Freighter(this.iota, stateFreighterKey)
+        const firstMessage = await this.Freighter.getDataList(this.iota, stateFreighter.getAddressSeed(), 0)
+        if(firstMessage.length > 0) {
+            var decrypted = await sidh.decrypt(firstMessage[0].message, this.keyPair.privateKey)
+            decrypted = Buffer.from(decrypted) // uint8 to Buffer
+            const checksum = decrypted.slice(0, checksumLength)
+            const end = decrypted.slice(checksumLength, decrypted.length)
+            const channelKey = end.slice(0, 32)
+            const metadata = end.slice(32, end.length)
+            
+            if(FreighterPrivateChannel.hash(end).slice(0, checksumLength).equals(checksum)) {
+                // We're good to go
+                this.emit('dial', { channelKey, metadata })
+            }
         }
     }
 
-    static async dialChannelKey(iota, Freighter, channelAddress, channelKey, metadata = null, mwm = 14) {
-        if(!(channelAddress.length == 32)) {
-            throw new Error("channelAddress has to be a Buffer of length 32!")
-        }
+    static async dialChannelKey(iota, Freighter, channelAddress, channelKey, metadata = null, mwm = 14, stateFreighterKey) {
         var handshake = channelKey
         if(metadata != null) {
             handshake = Buffer.concat([handshake, metadata])
         }
         var checksum = FreighterPrivateChannel.hash(handshake).slice(0, checksumLength)
         handshake = Buffer.concat([checksum, handshake])
-        var freighter = new Freighter(iota, channelAddress)
-        var historyIndex = -1;
-        var success = false;
-        async function loadHistory() {
-            const historyMessages = await Freighter.getChannelHistory(iota, freighter.getAddressSeed(), historyIndex, 15)
-            if(historyMessages !== null && historyMessages.length > 0) {
-                historyIndex = historyMessages[0].index
-                for(var m of historyMessages) {
-                    const publicKey = m.message
-                    if(publicKey.length === publicKeyLength) {
-                        const hash = FreighterPrivateChannel.hash(publicKey)
-                        if(hash.equals(channelAddress)) {
-                            // We got the right public key, we can stop here.
-                            const encrypted = await sidh.encrypt(handshake, publicKey)
-                            await freighter.sendMessage(Freighter.randomTrytes(crypto.randomBytes(32), 27), encrypted, mwm)
-                            success = true;
-                            return;
-                        }
-                    }
-                }
-                if(historyIndex > 0) {
-                    await loadHistory()
-                }
-            }
+        stateFreighterKey = crypto.createHmac('sha256', channelAddress)
+            .update(stateFreighterKey)
+            .digest()
+        const ownerFreighter = new Freighter(iota, channelAddress)
+        const stateFreighter = new Freighter(iota, stateFreighterKey)
+        const firstMessage = await Freighter.getDataList(iota, stateFreighter.getAddressSeed(), 0)
+        
+        if(firstMessage.length > 0) {
+            // TODO: Check if first message is the handshake
+            return 'E_STATE_CHANNEL_COLLISION'
         }
-        await loadHistory()
-        if(!success) {
-            throw new Error("public key not found, has the owner opened the channel already?")
-        }
-        return channelKey;
+
+        const publicKey = channelAddress.slice(versionBytes.length, channelAddress.length - checksumLength)
+        const encrypted = await sidh.encrypt(handshake, publicKey)
+        await stateFreighter.sendMessage(Freighter.randomTrytes(crypto.randomBytes(32), 27), encrypted, mwm)
+        await ownerFreighter.sendMessage(Freighter.randomTrytes(crypto.randomBytes(32), 27), stateFreighterKey, mwm)
+
+        return null
     }
 
-    static async dial(iota, Freighter, channelAddress, metadata = null, mwm = 14) {
+    static async dial(iota, Freighter, channelAddress, metadata = null, mwm = 14, stateFreighterKey = crypto.randomBytes(32)) {
         const channelKey = crypto.randomBytes(32)
-        await FreighterPrivateChannel.dialChannelKey(iota, Freighter, channelAddress, channelKey, metadata, mwm)
-        return channelKey
+        const res = await FreighterPrivateChannel.dialChannelKey(iota, Freighter, channelAddress, channelKey, metadata, mwm, stateFreighterKey)
+        return res === null ? channelKey : res
     }
     
-    static hash(pubKey) {
+    static hash(bytes) {
         // Secret is a nothing up my sleeve number chosen to make sure we have unique SHA256 hashes
         const secret = 'https://freighter.skaly.io'
         return crypto.createHmac('sha256', secret)
-            .update(pubKey)
+            .update(bytes)
             .digest()
-    }
-    
-    async openChannel() {
-        await this.freighter.sendMessage(this.Freighter.randomTrytes(crypto.randomBytes(27)), this.keyPair.public, this.mwm)
     }
 
     static async generatePrivateChannel(seed) {
-        if(!(seed.length == 32)) {
+        if(seed.length != 32) {
             throw new Error("seed has to be a Buffer of length 32!")
         }
         var sidhKeyPair = await sidh.keyPairFromSeed(seed)
+        var address = Buffer.concat([versionBytes, Buffer.from(sidhKeyPair.publicKey)])
+        address = Buffer.concat([address, FreighterPrivateChannel.hash(address).slice(0, checksumLength)])
         return {
-            address: FreighterPrivateChannel.hash(sidhKeyPair.publicKey),
-            privateKey: Buffer.concat([Buffer.from(sidhKeyPair.privateKey), Buffer.from(sidhKeyPair.publicKey)])
+            address,
+            privateKey: sidhKeyPair.privateKey
         }
     }   
 }

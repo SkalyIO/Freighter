@@ -8,7 +8,9 @@
   import { onDestroy } from 'svelte';
   import { push } from "svelte-spa-router";
   import { iota } from "../Singleton.js";
+  const crypto = require('crypto');
   let keyPair;
+  let pubKeyDiv = null;
   let privateChannel = null;
   let channelAddr = "";
   let nickname = "";
@@ -25,14 +27,17 @@
       Freighter,
       FreighterPolling,
       iota.instance,
-      keyPair.privateKey
+      keyPair
     )
     privateChannel.mwm = iota.mwm
-    await privateChannel.openChannel()
     privateChannel.on('dial', (obj) => {
         channels.push({ key: obj.channelKey.toString('hex'), name: obj.metadata.toString('ascii') })
         channels = channels
     })
+  }
+
+  function selectPubKey() {
+    window.getSelection().selectAllChildren(pubKeyDiv)
   }
 
   async function talkTo() {
@@ -40,11 +45,17 @@
     nickname = nickname.trim()
     channelAddr = channelAddr.trim()
     try {
-        var channelKey = await FreighterPrivateChannel.dial(iota.instance, Freighter, Buffer.from(channelAddr, 'hex'), Buffer.from(nickname, 'ascii'), iota.mwm)
+        const nicknameBuf = Buffer.from(nickname, 'ascii')
+        var channelKey = await FreighterPrivateChannel.dial(iota.instance, Freighter, Buffer.from(channelAddr, 'hex'), nicknameBuf, iota.mwm, nicknameBuf)
+        if(channelKey === 'E_STATE_CHANNEL_COLLISION') {
+          loading = false;
+          return alert(`There is already a channel from someone with the nickname ${nickname}! Please choose another one...`)
+        }
         push(`/channel/default/${channelKey.toString('hex')}`)
     }
     catch (e) {
         alert("Error trying to find channel: " + e.message)
+        console.error(e);
     }
     loading = false
   }
@@ -60,6 +71,13 @@
 <style lang="stylus">
   .privKey,.pubKey {
     font-family: "Courier New", Courier, monospace;
+  }
+
+  .pubKey {
+    max-width: 620px;
+    word-break: break-all;
+    margin: 0 auto; 
+    cursor: pointer;    
   }
 </style>
 
@@ -103,7 +121,7 @@
     <b>Channel Address</b>
     (to be shared publicly):
     <br />
-    <div class="pubKey">
+    <div bind:this={pubKeyDiv} on:click={selectPubKey} class="pubKey">
       {keyPair.address.toString('hex')}
       <br />
     </div>
