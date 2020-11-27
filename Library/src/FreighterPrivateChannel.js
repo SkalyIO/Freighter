@@ -30,6 +30,7 @@ class FreighterPrivateChannel extends EventEmitter {
             }
         })
         this.polling.startPolling()
+        console.log(`FRPC Protocol v${FRPCVersion} started...`);
     }
 
     async loadPreviousDials() {
@@ -78,6 +79,7 @@ class FreighterPrivateChannel extends EventEmitter {
     }
 
     static async dialChannelKey(iota, Freighter, channelAddress, channelKey, metadata = null, mwm = 14, stateFreighterKey) {
+        console.log(`[dialChannelKey] FRPC Protocol v${FRPCVersion} started...`);
         var handshake = channelKey
         if(metadata != null) {
             handshake = Buffer.concat([handshake, metadata])
