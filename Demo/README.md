@@ -16,7 +16,7 @@ Text written `like this` are terminal commands.
 
 2. Install yarn because it's better than npm and we need some of it's features: `npm install -g yarn`
 
-3. Run `git clone git@github.com:peterwilli/Freighter.git` to clone this repo
+3. Run `git clone https://github.com/SkalyIO/Freighter.git` to clone this repo
 
 4. Go to the Library folder in this repo: `cd <repo folder>/Library`
 
