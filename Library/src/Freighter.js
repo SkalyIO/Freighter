@@ -1,22 +1,16 @@
 const crypto = require('crypto')
-import {
-    addChecksum
-} from '@iota/checksum'
-import { Buffer } from 'buffer';
+const {addChecksum} = require('@iota/checksum')
+const { Buffer } = require('buffer');
 
 const TRYTE_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ9"
 const CHECKSUM_LENGTH = 2
 const RANDOM_MASK_BYTE_LENGTH = 2
 const tryteCoder = require('base-x')(TRYTE_CHARSET)
 
-export default class Freighter {
-    #seed = null;
-    #currentIndex = 0;
-    static version = "0.15.5"
-
+class Freighter {
     constructor(iota, seed) {
-        this.#seed = seed
-        this.#currentIndex = 0
+        this.seed = seed
+        this.currentIndex = 0
         this.iota = iota
     }
 
@@ -84,13 +78,14 @@ export default class Freighter {
         return result
     }
 
-    static async getDataListFromIndexes(iota, addrSeed, indexes) {
+    static async getDataListFromIndexes(iota, addrSeed, indexes, tags) {
         const addressToIndexMap = new Map(indexes.map((idx) => {
             return [Freighter.randomTrytes(Freighter.getKey(addrSeed, `address_${idx}`), 81), idx]
         }))
         const addresses = [... addressToIndexMap.keys()]
         var searchValues = {
-            addresses
+            addresses,
+            tags
         }
         var txs = await iota.findTransactionObjects(searchValues)
         var bundles = {}
@@ -152,14 +147,14 @@ export default class Freighter {
         return ret
     }
 
-    static async getDataList(iota, addrSeed, start = 0, length = 1) {
+    static async getDataList(iota, addrSeed, start = 0, length = 1, tags) {
         var indexes = Array.from({ length }, (v, i) => start + i)
-        return await Freighter.getDataListFromIndexes(iota, addrSeed, indexes)
+        return await Freighter.getDataListFromIndexes(iota, addrSeed, indexes, tags)
     }
 
     // Goes over the channel backwards and return the first page, as to which later new pages can be added...
     // Due to the way it's working, it can happen that more than itemsPerPage can be returned in 1 result, but never less than itemsPerPage
-    static async getChannelHistory(iota, addrSeed, currentIndex = -1, itemsPerPage = 15) {
+    static async getChannelHistory(iota, addrSeed, currentIndex = -1, itemsPerPage = 15, tags) {
         // Find the current index first.
         if(currentIndex === -1) {
             currentIndex = await Freighter.findChannelIndex(iota, addrSeed, 0)
@@ -173,13 +168,18 @@ export default class Freighter {
         }
         var result = []
         while(result.length < itemsPerPage) {
-            const data = await Freighter.getDataList(iota, addrSeed, currentIndex, itemsPerPage)
+            const data = await Freighter.getDataList(iota, addrSeed, currentIndex, itemsPerPage, tags)
             result = data.concat(result)
             if(currentIndex <= 0) {
                 break
             }
             currentIndex -= itemsPerPage
         }
+
+        result.map((tx)=>{
+            tx.message = tx.message.toString()
+        })
+        console.log("Result = ", result)
         return result
     }
 
@@ -189,7 +189,7 @@ export default class Freighter {
     }
 
     getAddressSeed() {
-        return Freighter.getKey(this.#seed, "address_seed")
+        return Freighter.getKey(this.seed, "address_seed")
     }
 
     static getInjectionBytePosition(addrSeed, msgLength, purpose) {
@@ -375,14 +375,14 @@ export default class Freighter {
     }
 
     async sendMessage(tag, data, mwm = 14) {
-        if (!Buffer.isBuffer(data)) { 
+        if (!Buffer.isBuffer(data)) {
             // We assume data is a plain string
             data = Buffer.from(data, 'ascii')
         }
 
         const addrSeed = this.getAddressSeed()
-        this.#currentIndex = await Freighter.findChannelIndex(this.iota, addrSeed, this.#currentIndex)
-        const _index = this.#currentIndex // To avoid race condition should sendMessage be called twice or more in parallel
+        this.currentIndex = await Freighter.findChannelIndex(this.iota, addrSeed, this.currentIndex)
+        const _index = this.currentIndex // To avoid race condition should sendMessage be called twice or more in parallel
         
         const address = addChecksum(Freighter.randomTrytes(Freighter.getKey(addrSeed, `address_${_index}`), 81))
         const lockedData = Freighter.lockMessage(addrSeed, data, _index)
@@ -398,7 +398,7 @@ export default class Freighter {
         try {
             const trytes = await this.iota.prepareTransfers('9'.repeat(81), transfers)
             const bundle = await this.iota.sendTrytes(trytes, 4, mwm)
-            this.#currentIndex++;
+            this.currentIndex++;
             return bundle
         } catch (e) {
             console.error('prepareTransfers or sendTrytes error!', transfers, e);
@@ -406,3 +406,7 @@ export default class Freighter {
         }
     }
 }
+
+Freighter.version = "0.15.6"
+
+module.exports = Freighter
